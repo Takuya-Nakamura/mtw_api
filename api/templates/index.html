@@ -1,0 +1,19 @@
+<!-- static　タグのload. staticタグの機能はurlを取得 -->
+{% load static %} 
+
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+
+</head>
+
+<body>
+    <h1>Hello MTW API</h1>
+</body>
+
+</html>
