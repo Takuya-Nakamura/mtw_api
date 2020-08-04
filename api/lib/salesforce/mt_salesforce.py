@@ -3,7 +3,9 @@ from pprint import pprint as p
 import os
 import pickle  # object serialize
 from simple_salesforce import Salesforce
+from simple_salesforce.exceptions import *
 import settings
+import sys
 
 
 class MtSalesForce():
@@ -13,37 +15,55 @@ class MtSalesForce():
     def __init__(self):
         p("__init__")
         self.client_instance_file = './access_object'
-        self.client_instance()
+        self.load_client()
 
 
-    ####  初期設定関連  ####
-
-    def client_instance(self):
+    ############################################
+    ##  authnticatoion  
+    ############################################
+    def load_client(self):
         """set simple_salesforce instance
         """
-        p("instance")
         if os.path.exists(self.client_instance_file) == False:
-            p("[log]re autehntication from salesforce")
-            self.load_client_instance()
-            self.client_instance()
+            p("[Log]]autehntication from salesforce")
+            self.authenticate()
+            self.load_client()
         else:
             with open(self.client_instance_file, 'rb') as f:
-                p("[log] autehntication from file")
+                p("[Log]autehntication from file")
                 self.client = pickle.load(f)
 
-    def load_client_instance(self):
-        p("load_client_instance")
+
+    def reload_client(self):
+        os.remove(self.client_instance_file)
+        self.load_client()
+
+
+    def authenticate(self):
+        
         sf = Salesforce(
-            username=settings.SALESFORCE_USERNAME, 
+            username=settings.SALESFORCE_USERNAME,
             password=settings.SALESFORCE_PASSWORD,
-            security_token=settings.SALESFORCE_SECURITY_TOKEN
+            security_token=settings.SALESFORCE_SECURITY_TOKEN,
+            organizationId=settings.SALESFORCE_ORGANIZATION_ID,
+            domain=settings.DOMAIN
         )
         # シリアライズ
         with open(self.client_instance_file, 'wb') as f:
             pickle.dump(sf, f)
 
-    ####  リクエスト関連 ####
 
+    ############################################
+    ##  action
+    ############################################
     def query(self, soql):
-        p("query")
-        return self.client.query(soql)
+        try:
+            return self.client.query(soql)
+        except SalesforceExpiredSession as e:
+            # セッション破棄
+            p("[Log]TokentTimeout")
+            self.reauthenticate()
+            return self.query(soql)
+
+
+
