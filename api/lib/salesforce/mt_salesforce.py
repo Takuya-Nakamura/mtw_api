@@ -13,14 +13,13 @@ class MtSalesForce():
     """
 
     def __init__(self):
-        p("__init__")
         self.client_instance_file = './access_object'
         self.load_client()
 
+    ############################################
+    # authnticatoion
+    ############################################
 
-    ############################################
-    ##  authnticatoion  
-    ############################################
     def load_client(self):
         """set simple_salesforce instance
         """
@@ -33,14 +32,11 @@ class MtSalesForce():
                 p("[Log]autehntication from file")
                 self.client = pickle.load(f)
 
-
     def reload_client(self):
         os.remove(self.client_instance_file)
         self.load_client()
 
-
     def authenticate(self):
-        
         sf = Salesforce(
             username=settings.SALESFORCE_USERNAME,
             password=settings.SALESFORCE_PASSWORD,
@@ -52,18 +48,16 @@ class MtSalesForce():
         with open(self.client_instance_file, 'wb') as f:
             pickle.dump(sf, f)
 
+    ############################################
+    # action
+    ############################################
 
-    ############################################
-    ##  action
-    ############################################
-    def query(self, soql):
+    def query(self, soql, retry=0):
         try:
             return self.client.query(soql)
         except SalesforceExpiredSession as e:
             # セッション破棄
-            p("[Log]TokentTimeout")
-            self.reauthenticate()
-            return self.query(soql)
-
-
-
+            p("[Log]TokenTimeout" + retry + 1)
+            if(retry < 3):
+                self.reload_client()
+                return self.query(soql, retry + 1)
