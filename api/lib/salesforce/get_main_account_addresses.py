@@ -11,28 +11,27 @@ def main():
     # dummy_id :001N000001HsLSUIA3
     check_args()
 
-    args = sys.argv    
+    args = sys.argv
     account_id = args[1]
     msf = MtSalesForce()
+
     soql =  \
         "SELECT (SELECT Id, AddressClass__c FROM " \
         "AccountAddresses__r WHERE AddressClass__c = '主たる勤務先') " \
         "FROM Account WHERE Id = '%s'" % (account_id)
-    
-    response = msf.query(soql)    
+
+    response = msf.query(soql)
+
     account_id = response['records'][0]['AccountAddresses__r']['records'][0]['Id']
     p(account_id)
     return account_id
 
+
 def check_args():
-    if len(sys.argv) <= 1  :
-        p("invalid arguments") 
+    if len(sys.argv) <= 1:
+        p("invalid arguments")
         sys.exit(0)
-    
 
 
 if __name__ == "__main__":
     main()
-
-
-
