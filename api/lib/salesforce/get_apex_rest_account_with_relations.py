@@ -1,7 +1,7 @@
 from pprint import pprint as p
 from mt_salesforce import MtSalesForce
 import sys
-import pandas as pd
+from util import * 
 
 
 def main():
@@ -9,10 +9,9 @@ def main():
     """
 
     # https://cs6.salesforce.com/services/apexrest/account/with_relations/?id=001N000001HsLSUIA3
+    args = sys.argv
+    check_args(args, 1)
 
-    check_args()
-
-    args = sys.argv    
     account_id = args[1]
     msf = MtSalesForce()
 
@@ -23,10 +22,6 @@ def main():
     return response
 
 
-def check_args():
-    if len(sys.argv) <= 1  :
-        p("invalid arguments") 
-        sys.exit(0)
     
 
 

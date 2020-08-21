@@ -2,16 +2,16 @@ from pprint import pprint as p
 from mt_salesforce import MtSalesForce
 import sys
 import pandas as pd
-
+from util import * 
 
 def main():
     """ AccountIDを指定して、該当ユーザーの主たる勤務先のIDを取得する
     """
 
     # dummy_id :001N000001HsLSUIA3
-    check_args()
-
     args = sys.argv
+    check_args(args, 1)
+
     account_id = args[1]
     msf = MtSalesForce()
 
@@ -27,10 +27,6 @@ def main():
     return account_id
 
 
-def check_args():
-    if len(sys.argv) <= 1:
-        p("invalid arguments")
-        sys.exit(0)
 
 
 if __name__ == "__main__":

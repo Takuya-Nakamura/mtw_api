@@ -8,6 +8,8 @@ import settings
 import sys
 import requests
 import json
+import functools
+
 
 """ clientの中身
 {'apex_url': 'https://cs6.salesforce.com/services/apexrest/',
@@ -71,76 +73,115 @@ class MtSalesForce():
             pickle.dump(sf, f)
 
     ############################################
-    # action
+    # public
     ############################################
 
     def query(self, soql, retry=0):
+        func = functools.partial(self.client.query, soql)
+        return self._request_with_retry(func)
+
+    def apexecute(self, api_path, method, data):
+        func = functools.partial(self.client.apexecute, api_path, method, data)
+        return self._request_with_retry(func)
+
+    def http_request(self, api_path, method, data):
+        func = functools.partial(self._http_request, api_path, method, data)
+        return self._request_with_retry(func)
+
+    ############################################
+    # private
+    ############################################
+
+    # 関数(引数固定済み)を受け取ってそれを実行、
+    # 認証失敗の場合、認証を取得し直して一定回数リトライする
+
+    def _request_with_retry(self, func, *args, retry=0):
         try:
-            return self.client.query(soql)
+            return func()
         except SalesforceExpiredSession as e:
             p("[Log]SalesforceExpiredSession")
-            if(retry < 3):
+            if(retry < 2):
                 self.reload_client()
-                return self.client.query(soql)
+                return self._request_with_retry(func, retry=retry + 1)
             else:
                 # TODO: log出力と通知
                 p("[Log]retry stop")
                 p(e)
         except Exception as e:
             # TODO: log出力と通知
-            p("[Log]query Exception")
+            p("[Log]query Exception2")
             p(e)
 
-    def apexecute(self, api_path, method, data, retry=0):
-        try:
-            return self.client.apexecute(api_path, method, data)
-        except SalesforceExpiredSession as e:
-            p("[Log]SalesforceExpiredSession")
-            if(retry < 3):
-                self.reload_client()
-                return self.client.apexecute(api_path, method, data)
-            else:
-                # TODO: log出力と通知
-                p("[Log]retry stop")
-        except Exception as e:
-            # TODO: log出力と通知
-            p("[Log]query Exception")
-            p(e)
+    # simple_salesforceを使わない、リクエスト
+    #
+    def _http_request(self, api_path, method, data):
+        """ ライブラリを使わないでシンプルにrequestを送る
+        """
+        path = self.client.base_url + api_path
+        with requests.session() as s:
+            response = s.request(
+                method,
+                path,
+                headers=self.client.headers,
+                cookies={'sid': self.client.session_id},
+                json=data
+            )
+        # p(vars(response))
+        return response
 
-    def raw_request(self, api_path):
-        p("■■■■■■ raw_request")
-        p(vars(self.client))
+    ############################################
+    # retry
+    ############################################
 
+    # def query(self, soql, retry=0):
+    #     try:
+    #         return self.client.query(soql)
+    #     except SalesforceExpiredSession as e:
+    #         p("[Log]SalesforceExpiredSession")
+    #         if(retry < 3):
+    #             self.reload_client()
+    #             return self.client.query(soql)
+    #         else:
+    #             # TODO: log出力と通知
+    #             p("[Log]retry stop")
+    #             p(e)
+    #     except Exception as e:
+    #         # TODO: log出力と通知
+    #         p("[Log]query Exception")
+    #         p(e)
 
+    # def apexecute(self, api_path, method, data, retry=0):
+    #     try:
+    #         return self.client.apexecute(api_path, method, data)
+    #     except SalesforceExpiredSession as e:
+    #         p("[Log]SalesforceExpiredSession")
+    #         if(retry < 3):
+    #             self.reload_client()
+    #             return self.client.apexecute(api_path, method, data)
+    #         else:
+    #             # TODO: log出力と通知
+    #             p("[Log]retry stop")
+    #     except Exception as e:
+    #         # TODO: log出力と通知
+    #         p("[Log]query Exception")
+    #         p(e)
 
+    # def raw_request(self, api_path, method):
+    #     """ クライアントを使わないでシンプルにrequestを送る
+    #     """
+    #     path = self.client.base_url + api_path
+    #     p("path:" +  path)
 
+    #     item_data = {
+    #         'SessionId__c': 'AAAAAAAAAAAAAAAA',
+    #     }
 
-
-    """
-    etry処理を１っ箇所にまとめたい....
-    """
-
-    """
-    def query(self, soql, retry = 0):
-        return self._request_with_retry(self.client.query, soql=soql)
-
-    def apexecute(self, api_path, method, data, retry = 0):
-        # return self.client.apexecute( api_path, method, data)
-        return self._request_with_retry(self.client.apexecute, api_path=api_path, method=method, data=data)
-        
-    # 引数が異なると別のリクエストを使い分けられない..
-    def _request_with_retry(self, func, *args, retry=0):
-        try:
-            return func(args)
-        except SalesforceExpiredSession as e:
-            p("[Log]SalesforceExpiredSession")
-            if(retry < 3):
-                self.reload_client()
-                return func(args, retry + 1)
-            else:
-                # TODO: log出力と通知
-                p("[Log]retry stop")
-        except Exception as e:
-            # TODO: log出力と通知
-            p("[Log]query Exception")
-    """
+    #     with requests.session() as s:
+    #         response = s.request(
+    #             method,
+    #             path,
+    #             headers=self.client.headers,
+    #             cookies={'sid': self.client.session_id},
+    #             json = item_data
+    #         )
+    #     p(vars(response))
